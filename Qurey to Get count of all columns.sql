@@ -1,3 +1,21 @@
+
+-- Check NULL VAlue Counts
+
+	-- Create Table to Store Results
+
+		Truncate table Sf.SFP_7607_Case_Column_Count;
+
+		Insert into Sf.SFP_7607_Case_Column_Count
+		Select 
+			Column_Name,
+			ORDINAL_POSITION,
+			Cast(NULL as varchar(50)) as _Count 
+			--INTO Sf.SFP_7607_Case_Column_Count
+		from 
+			information_schema.columns 
+		where 
+			table_name = 'SFP_7607_Case_Fix';
+
 	-- Store PRoc to update Sf.SFP_7607_Case_Column_Count
 	
 	Declare
