@@ -1,0 +1,10 @@
+
+
+-- Date Conversion
+
+convert(varchar,cast(ScheduleEndDate as date), 103) as ScheduleEndDate,
+	--NextPaymentDate,
+	Case when isdate(NextPaymentDate) = 1 then 
+	convert(varchar,cast(NextPaymentDate as date), 103)
+	else
+	NULL end as NextPaymentDate
