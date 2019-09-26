@@ -1,0 +1,29 @@
+Drop proc Give_Dates;
+
+Create Proc Give_Dates  @First_Day int,	 @Last_Day int as
+
+Declare
+	
+	 @Day int,
+	 @n int;
+
+
+Set @n = (@Last_Day - @First_Day) / 7
+Set @Day = @First_Day
+
+	 WHILE 	
+		@n != 1
+	Begin
+		
+	Set @Day = @Day + 7
+
+	--Select @n
+	Select @Day
+
+	Set @n = @n - 1
+
+	END
+
+GO
+
+exec Give_Dates 5,26
