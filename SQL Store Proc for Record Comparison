@@ -1,0 +1,147 @@
+USE [**DATABASE***]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Update_Rec_Status]    Script Date: 30/09/2019 1:28:07 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+
+
+
+-- Drop proc [dbo].[Update_Rec_Status]
+
+create proc [dbo].[Update_Rec_Status] @OP_Store_Tbl varchar(100)
+/* =================================================================================================================
+       Description:  Update the Mismatch Records in the Newly Created Rec Tables
+
+       Example:
+              exec [dbo].[Update_Rec_Status] 'Test_Rec'
+================================================================================================================= */
+as
+
+SET NOCOUNT ON;
+
+-- Declare all the Variables
+declare 
+
+       -- Need External Input
+       --@OP_Store_Tbl varchar(100),
+
+       -- External Input Not Needed
+       @Var_Column_Count int,
+       @Var_Ordinal_Positon int,
+       @cnt INT = 1,
+       @InsertString nVarchar(4000),
+       @Rec_TableName Varchar(150),
+	   @ColName1 Varchar(150),
+	   @ColName2 Varchar(150); -- 'Siebel_Rec1_CaseDetails_New**DATABASE***'
+
+
+-- Update the Mismatch Records in the Newly Created Rec Tables
+
+       Set @Rec_TableName = '[**DATABASE***].dbo.'+@OP_Store_Tbl
+       Set @Var_Column_Count = (Select count(1) from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and COLUMN_NAME != 'Rec_Status');
+       Set @Var_Ordinal_Positon = 1;
+
+       WHILE 
+              @cnt < @Var_Column_Count and @Var_Ordinal_Positon < @Var_Column_Count/2
+       BEGIN
+       
+                     Set @Var_Ordinal_Positon = ( Select ORDINAL_POSITION from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @cnt );
+
+					 Set @ColName1 = (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Ordinal_Positon)
+
+					 Set @ColName2 = (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Column_Count -(@Var_Column_Count/2)+@Var_Ordinal_Positon)
+
+                     Set @InsertString = (
+              
+                     Select 
+                                  'Insert into [**DATABASE***].[dbo].'+@OP_Store_Tbl+'_2'+' Select Primary_key,'
+                                  +''''+ (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Ordinal_Positon)+' '' as Column_Name,'
+                                  + (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Ordinal_Positon)
+                                  +','
+                                  + (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Column_Count -(@Var_Column_Count/2)+@Var_Ordinal_Positon)
+                                  +' From dbo.'+@OP_Store_Tbl +' where ('
+                                  + @ColName1
+                                  +'!=' 
+                                  + @ColName2 +') OR ( Case when '+ @ColName1 +' is null then 1 else 2 end != Case when '+ @ColName2+' is null then 1 else 2 end ) '
+                     from 
+                                  INFORMATION_SCHEMA.Columns 
+                     where 
+                                  TABLE_NAME = @OP_Store_Tbl 
+                                  and ORDINAL_POSITION = @Var_Column_Count/2
+                     )
+
+                     EXECUTE sp_executesql @InsertString 
+
+                     Set @InsertString = (
+              
+                     'Update '+@Rec_TableName+'
+                     
+                      Set 
+                           Rec_Status = Rec_Status + ''Mismatch in Column ' +' '+  (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Ordinal_Positon)+''' + CHAR(13) + CHAR(10)
+                     Where '+
+                     (Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Ordinal_Positon)
+                     +'!='
+                     +(Select Column_Name from INFORMATION_SCHEMA.Columns where TABLE_NAME = @OP_Store_Tbl and ORDINAL_POSITION = @Var_Column_Count -(@Var_Column_Count/2)+@Var_Ordinal_Positon)
+                     +' and Primary_key is not Null'
+                     )
+
+                     EXECUTE sp_executesql @InsertString 
+
+  
+                 SET @cnt = @cnt + 1;
+       END
+
+/* Update Missing Test Query Keys */
+
+              Set @InsertString = (
+              
+              'Update '+@Rec_TableName+'
+                     
+               Set 
+                     Rec_Status = ''Record Missing in Test Query''
+              Where ( Primary_key is Null)'
+              )
+
+              EXECUTE sp_executesql @InsertString 
+
+              /* Update Missing Target Query Data */
+
+              Set @InsertString = (
+              
+              'Update '+@Rec_TableName+'
+                     
+               Set 
+                     Rec_Status = ''Record Missing in Target''
+              Where ( t_Primary_key is Null)'
+              )
+
+              EXECUTE sp_executesql @InsertString;
+
+              /* Insert Missing Target Query Data to tbl2*/
+              Set @InsertString = (
+              
+                     Select 
+                                  'Insert into [**DATABASE***].[dbo].'+@OP_Store_Tbl+'_2'+' Select Primary_key,
+                                  ''Primary_Key'' as Column_Name,Primary_key,t_Primary_key'
+                                  +' From dbo.'+@OP_Store_Tbl +' where Rec_Status in( ''Record Missing in Target'',''Record Missing in Test Query'' )'
+              )
+
+                     EXECUTE sp_executesql @InsertString
+;
+
+
+
+
+
+
+
+GO
+
+
