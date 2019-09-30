@@ -1,0 +1,377 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using System.Runtime.InteropServices;
+
+namespace Record_Comparison
+{
+    public partial class Form1 : Form
+    {
+        String ServerName;
+        String DatabaseName;
+        String TestteamQuery;
+        String TargetQuery;
+        String outputtblname;
+        String **DATABASE***_Database_Name = "**DATABASE***";
+        String csvPath;
+        String CTE_1_Query;
+        String CTE_2_Query;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            ServerName = textBox1.Text;
+        }
+
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+            DatabaseName = textBox2.Text;
+        }
+
+        private void textBox3_TextChanged(object sender, EventArgs e)
+        {
+            TestteamQuery = textBox3.Text;
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+            TargetQuery = textBox4.Text;
+        }
+
+        private void textBox5_TextChanged(object sender, EventArgs e)
+        {
+            outputtblname = textBox5.Text;
+        }
+
+        private void textBox6_TextChanged(object sender, EventArgs e)
+        {
+            csvPath = textBox6.Text;
+        }
+
+        private void textBox7_TextChanged(object sender, EventArgs e)
+        {
+            CTE_1_Query = textBox7.Text;
+        }
+
+        private void textBox8_TextChanged(object sender, EventArgs e)
+        {
+            CTE_2_Query = textBox8.Text;
+        }
+        //
+
+        //
+        private void button1_Click(object sender, EventArgs e)
+        {
+            //this.timer1.Start();
+            progressBar1.Value = 50;
+            String **DATABASE***_Database_Name = "**DATABASE***";
+                    
+
+            // Check if all the Required Parameters are entered
+
+            if (string.IsNullOrWhiteSpace(ServerName))
+            {
+                MessageBox.Show("Please Enter the ServerName to proceed");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(TestteamQuery))
+            {
+                MessageBox.Show("Please Enter the Testteam Query to proceed");
+                return;
+
+            }
+            if (string.IsNullOrWhiteSpace(TargetQuery))
+            {
+                MessageBox.Show("Please Enter the Target Query to proceed");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(outputtblname))
+            {
+                MessageBox.Show("Please Enter the Out Put TableName to proceed");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(csvPath))
+            {
+                MessageBox.Show("Please Enter the Output Path to proceed");
+                return;
+            }
+            progressBar1.Value = 10;
+            // Check if the Number of Columns matches between Test Query and table Query
+
+            // Drop the Rec Table if it is already available in the **DATABASE*** Database
+            String Drop_Rec_table = "IF (Select table_name from information_Schema.tables where table_name ='"+ outputtblname+ "') IS NOT NULL"
+                + " DROP TABLE dbo."+ outputtblname;
+            String Drop_Rec_table2 = "IF (Select table_name from information_Schema.tables where table_name ='" + outputtblname+"_2" + "') IS NOT NULL"
+                + " DROP TABLE dbo." + outputtblname + "_2";
+                //MessageBox.Show(Drop_Rec_table2);
+
+            RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Drop_Rec_table);
+            RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Drop_Rec_table2);
+
+            progressBar1.Value = 25;
+
+            //Create the Rec Table in the **DATABASE*** Database
+            String Create_Rec_table = "Select *,Cast('' as Varchar(4000)) as Rec_Status INTO dbo." + outputtblname + " from ( "
+                   + TestteamQuery + " ) a Full Outer Join ( " + TargetQuery + " ) b on a.primary_key = b.t_primary_key";
+
+            //String Create_Rec_table_With_2_CTE =
+
+            String Create_Rec_table2 = "Select Cast('' as varchar(1000)) as Primary_Key,Cast('' as varchar(1000)) as Column_Name_of_Mismatch_Fields,"
+                + "Cast('' as varchar(4000)) as Column_from_Test_Query,Cast('' as varchar(4000)) as Column_from_DB_Query INTO dbo." + outputtblname + "_2  where 1 = 2";
+
+            //MessageBox.Show(Create_Rec_table2);
+
+            //RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Create_Rec_table);
+
+
+            if (!checkBox1.Checked && !checkBox2.Checked)
+            {
+                RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Create_Rec_table);
+            }
+            else if (checkBox1.Checked && checkBox2.Checked)
+            {
+                string cte2query = ReplaceFirst(CTE_2_Query, "With", "");
+                RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_1_Query + "," + cte2query + " " + Create_Rec_table);
+            }
+            else if (checkBox1.Checked && !checkBox2.Checked)
+            {
+                RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_1_Query + " " + Create_Rec_table);
+            }
+            else if (!checkBox1.Checked && checkBox2.Checked)
+            {
+                RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_2_Query + " " + Create_Rec_table);
+            }
+
+            // Create 2 table
+            RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Create_Rec_table2);
+
+
+            progressBar1.Value = 50;
+
+            // Call Store Proc in **DATABASE*** Database to do the comparison by field level
+
+            String Proc_To_Update_Rectbl = "exec [dbo].[Update_Rec_Status] '"+ outputtblname+"'";
+                //MessageBox.Show(Proc_To_Update_Rectbl);
+
+            RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Proc_To_Update_Rectbl);
+            MessageBox.Show("Rec Complete, Table Results Available in "+ **DATABASE***_Database_Name+".dbo."+ outputtblname + " and " + **DATABASE***_Database_Name + ".dbo." + outputtblname+"_2");
+
+            progressBar1.Value = 75;
+            // Generate the output CSV Counts
+            SQLToCSV("Select 'Total Test Records', Convert(varchar(10),count(1)) as [Comment] from [**DATABASE***].[dbo]." + outputtblname + " where Primary_key is Not null"
+           + " Union Select 'Total Target Records', Convert(varchar(10),count(1)) as [Comment] from [**DATABASE***].[dbo]." + outputtblname + " where t_Primary_key is Not null"
+           + " Union Select Column_Name_of_Mismatch_Fields, Convert(varchar(10), count(1)) + ' Mismatched Records'"
+           + " from [**DATABASE***].[dbo]." + outputtblname + "_2 Group by Column_Name_of_Mismatch_Fields; ", csvPath + "\\" + outputtblname + "_Count.csv"
+           );
+
+            progressBar1.Value = 90;
+            // Generate the output CSV Errors
+            SQLToCSV("Select * from [**DATABASE***].[dbo]." + outputtblname + "_2", csvPath + "\\" + outputtblname + "_Errors.csv");
+
+            progressBar1.Value = 100;
+            //this.timer1.Stop();
+            
+
+            MessageBox.Show("Files Generated : " + csvPath + "\\" + outputtblname + "_Count.csv and " + outputtblname + "_Errors.csv");
+            progressBar1.Value = 0;
+        }
+        public static void RunSQL(string ConnectionString, string SQL)
+        {
+            SqlConnection conn = new SqlConnection(ConnectionString);
+            SqlDataAdapter da = new SqlDataAdapter();
+            SqlCommand cmd = conn.CreateCommand();
+            //cmd.CommandText = SQL;
+
+            conn.Open();
+            try
+            {
+                using (SqlCommand command = new SqlCommand(SQL, conn))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                Console.WriteLine("Query Failed Execution");
+                MessageBox.Show("Query Failed Execution "+ SQL);
+                //Environment.Exit(-1);
+            }
+            conn.Close();
+            return;
+        }
+
+        // Exit from the Program
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Environment.Exit(-1);
+        }
+
+        // Code to Create a CSV File
+        private static void SQLToCSV(string query, string Filename)
+        {
+
+            SqlConnection conn = new SqlConnection("Server = **SERVER*** ;Database=**DATABASE***; Trusted_Connection=true");
+            conn.Open();
+            SqlCommand cmd = new SqlCommand(query, conn);
+            SqlDataReader dr = cmd.ExecuteReader();
+
+            using (System.IO.StreamWriter fs = new System.IO.StreamWriter(Filename))
+            {
+                // Loop through the fields and add headers
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    string name = dr.GetName(i);
+                    if (name.Contains(","))
+                        name = "\"" + name + "\"";
+
+                    fs.Write(name + ",");
+                }
+                fs.WriteLine();
+
+                // Loop through the rows and output the data
+                while (dr.Read())
+                {
+                    for (int i = 0; i < dr.FieldCount; i++)
+                    {
+                        string value = dr[i].ToString();
+                        if (value.Contains(","))
+                            value = "\"" + value + "\"";
+
+                        fs.Write(value + ",");
+                    }
+                    fs.WriteLine();
+                }
+
+                fs.Close();
+            }
+        }
+
+        // Status : Hidden, Not being used in the code
+        private void button3_Click(object sender, EventArgs e) 
+        {
+            if (string.IsNullOrWhiteSpace(csvPath))
+            {
+                MessageBox.Show("Please Enter the Output Path to proceed");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(outputtblname))
+            {
+                MessageBox.Show("Please Enter the Out Put TableName to proceed");
+                return;
+            }
+
+            // Generate the output CSV Counts
+            SQLToCSV("Select 'Total Records', Convert(varchar(10),count(1)) as [Comment] from [**DATABASE***].[dbo]." + outputtblname
++ " Union Select Column_Name_of_Mismatch_Fields, Convert(varchar(10), count(1)) + ' Mismatched Records'"
++ " from [**DATABASE***].[dbo]." + outputtblname + "_2 Group by Column_Name_of_Mismatch_Fields; ", csvPath + "\\" + outputtblname + "_Count.csv");
+            
+            // Generate the output CSV Errors
+            SQLToCSV("Select * from [**DATABASE***].[dbo]."+outputtblname + "_2", csvPath + "\\" + outputtblname + "_Errors.csv");
+
+            MessageBox.Show("Files Generated : " +csvPath + "\\" + outputtblname + ".csv and " + outputtblname + "_Errors.csv");
+        }
+
+        public static string ReplaceFirst(string text, string search, string replace)
+        {
+            int pos = text.IndexOf(search);
+            if (pos < 0)
+            {
+                return text;
+            }
+            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+
+            if (progressBar1.Value == 100)
+            {
+                progressBar1.Value = 0;
+                timer1.Enabled = false;
+            }
+
+            //timer1.Enabled = true;
+            this.progressBar1.Increment(1);
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!checkBox1.Checked)
+            {
+                label15.Visible = false;
+                textBox7.Visible = false;
+                textBox7.Text = "";
+            }
+            else if (checkBox1.Checked)
+            {
+                label15.Visible = true;
+                textBox7.Visible = true;
+            }
+            
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!checkBox2.Checked)
+            {
+                label16.Visible = false;
+                textBox8.Visible = false;
+                textBox8.Text = "";
+            }
+            else if (checkBox2.Checked)
+            {
+                label16.Visible = true;
+                textBox8.Visible = true;
+            }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            String Create_Rec_table = "Select *,Cast('' as Varchar(4000)) as Rec_Status INTO dbo." + outputtblname + " from ( "
+                   + TestteamQuery + " ) a Full Outer Join ( " + TargetQuery + " ) b on a.primary_key = b.t_primary_key";
+
+            if (!checkBox1.Checked && !checkBox2.Checked)
+            {
+                //RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", Create_Rec_table);
+                System.Windows.Forms.MessageBox.Show(Create_Rec_table);
+            }
+            else if (checkBox1.Checked && checkBox2.Checked)
+            {
+                string cte2query = ReplaceFirst(CTE_2_Query, "With", "");
+                System.Windows.Forms.MessageBox.Show(CTE_1_Query + "," + cte2query + " " + Create_Rec_table);
+                //RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_1_Query + "," + ReplaceFirst(CTE_2_Query, "With", "") + " " + Create_Rec_table);
+            }
+            else if (checkBox1.Checked && !checkBox2.Checked)
+            {
+                System.Windows.Forms.MessageBox.Show(CTE_1_Query + " " + Create_Rec_table);
+                //RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_1_Query + " " + Create_Rec_table);
+            }
+            else if (!checkBox1.Checked && checkBox2.Checked)
+            {
+                System.Windows.Forms.MessageBox.Show(CTE_2_Query + " " + Create_Rec_table);
+                // RunSQL("Server = " + ServerName + ";Database=" + **DATABASE***_Database_Name + "; Trusted_Connection=true", CTE_2_Query + " " + Create_Rec_table);
+            }
+        }
+
+        private void label15_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
