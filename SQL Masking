@@ -138,10 +138,10 @@ GO
 --Examples :
 
 -- To Mask
-Select odi.function_Mask('Mask this',1,0)
+Select function_Mask('Mask this',1,0)
 
 -- To Unmask the Masked Data
-Select odi.function_Mask('ihab juya',0,1)
+Select function_Mask('ihab juya',0,1)
 
 -- To get data that cannot be unmasked
-Select odi.function_Mask('five',0,0)
+Select function_Mask('five',0,0)
