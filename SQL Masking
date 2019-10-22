@@ -1,0 +1,147 @@
+drop view vw_getRANDValue
+
+CREATE VIEW vw_getRANDValue
+AS
+SELECT FLOOR(RAND()*(26-1+1)+1) AS Value
+
+drop view vw_getchar
+CREATE VIEW vw_getchar
+AS
+Select 1  as NUM , 'f' as Char_ union Select 11 as NUM , 't' as Char_ union Select 21 as NUM , 'n' as Char_ union 
+Select 2  as NUM , 'h' as Char_ union Select 12 as NUM , 'g' as Char_ union Select 22 as NUM , 'o' as Char_ union
+Select 3  as NUM , 'c' as Char_ union Select 13 as NUM , 'w' as Char_ union Select 23 as NUM , 'p' as Char_ union
+Select 4  as NUM , 'i' as Char_ union Select 14 as NUM , 'b' as Char_ union Select 24 as NUM , 'l' as Char_ union
+Select 5  as NUM , 'e' as Char_ union Select 15 as NUM , 'x' as Char_ union Select 25 as NUM , 'q' as Char_ union
+Select 6  as NUM , 'u' as Char_ union Select 16 as NUM , 'j' as Char_ union Select 26 as NUM , 'm' as Char_ union
+Select 7  as NUM , 'a' as Char_ union Select 17 as NUM , 'r' as Char_ union
+Select 8  as NUM , 'y' as Char_ union Select 18 as NUM , 'z' as Char_ union
+Select 9  as NUM , 'j' as Char_ union Select 19 as NUM , 's' as Char_ union
+Select 10 as NUM , 'd' as Char_ union Select 20 as NUM , 'v' as Char_ 
+
+
+drop  Function odi.function_Mask;
+ 
+
+Create Function odi.function_Mask ( @value varchar(max),@mask int, @unmask int)
+Returns varchar(max)
+
+As
+
+Begin 
+
+declare @i int , @char varchar(1) , @replace_Char varchar(3) , @new_Value varchar(max) , @random_num int 
+
+
+
+	select @i = 1
+		if @value is null
+			select @new_Value = null
+		else
+		begin
+			select @new_Value =''
+
+if @mask = 1 AND @unmask = 0
+
+		-- Start While Loop
+		while (@i <= LEN(@value))
+			begin
+				select @char = substring(@value,@i,1)
+
+				select @replace_Char = 
+					Case 
+						when @char ='a' then 'h' when @char ='b' then 'f' when @char ='c' then 'o' when @char ='d' then 'k' when @char ='e' then 'n' when @char ='f' then 's'
+						when @char ='g' then 'g' when @char ='h' then 'u' when @char ='i' then 'y' when @char ='j' then 'e' when @char ='k' then 'b' when @char ='l' then 'x'
+						when @char ='m' then 'i' when @char ='n' then 't' when @char ='o' then 'c' when @char ='p' then 'w' when @char ='q' then 'l' when @char ='r' then 'p'
+						when @char ='s' then 'a' when @char ='t' then 'j' when @char ='u' then 'v' when @char ='v' then 'q' when @char ='w' then 'd' when @char ='x' then 'r'
+						when @char ='y' then 'z' when @char ='z' then 'm'
+					else @char end
+
+					set @new_Value = @new_Value + @replace_Char
+			set @i = @i +1
+		end -- End of While Loop
+ 
+if @mask = 0 AND @unmask = 1
+
+			-- Start While Loop
+			while (@i <= LEN(@value))
+				begin
+					select @char = substring(@value,@i,1)
+
+					select @replace_Char = 
+						Case 
+							when @char = 'h' then 'a' when @char = 'f' then 'b' when @char = 'o' then 'c' when @char = 'k' then 'd' when @char = 'n' then 'e' when @char = 's' then 'f'
+							when @char = 'g' then 'g' when @char = 'u' then 'h' when @char = 'y' then 'i' when @char = 'e' then 'j' when @char = 'b' then 'k' when @char = 'x' then 'l'
+							when @char = 'i' then 'm' when @char = 't' then 'n' when @char = 'c' then 'o' when @char = 'w' then 'p' when @char = 'l' then 'q' when @char = 'p' then 'r'
+							when @char = 'a' then 's' when @char = 'j' then 't' when @char = 'v' then 'u' when @char = 'q' then 'v' when @char = 'd' then 'w' when @char = 'r' then 'x'
+							when @char = 'z' then 'y' when @char = 'm' then 'z'
+						else @char end
+
+						set @new_Value = @new_Value + @replace_Char
+				set @i = @i +1
+			end -- End of While Loop
+
+
+if @mask = 0 AND @unmask = 0
+
+		
+		-- Start While Loop
+		while (@i <= LEN(@value))
+			begin
+
+			select @char = substring(@value,@i,1)
+
+				select @replace_Char = 
+					Case 
+						when @char ='a' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='b' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='c' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='d' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='e' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='f' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='g' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='h' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='i' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='j' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='k' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='l' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='m' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='n' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='o' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='p' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='q' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='r' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='s' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='t' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='u' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='v' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='w' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='x' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='y' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+						when @char ='z' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+					else @char end
+
+					set @new_Value = @new_Value + @replace_Char
+					
+			set @i = @i +1
+		end -- End of While Loop
+ 	
+	end
+
+
+return @new_Value
+
+END
+
+GO
+
+
+--Examples :
+
+-- To Mask
+Select odi.function_Mask('Mask this',1,0)
+
+-- To Unmask the Masked Data
+Select odi.function_Mask('ihab juya',0,1)
+
+-- To get data that cannot be unmasked
+Select odi.function_Mask('five',0,0)
