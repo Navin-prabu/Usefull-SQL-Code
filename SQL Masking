@@ -92,35 +92,14 @@ if @mask = 0 AND @unmask = 0
 
 				select @replace_Char = 
 					Case 
-						when @char ='a' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='b' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='c' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='d' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='e' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='f' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='g' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='h' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='i' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='j' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='k' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='l' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='m' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='n' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='o' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='p' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='q' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='r' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='s' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='t' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='u' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='v' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='w' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='x' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='y' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-						when @char ='z' then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
-					else @char end
+					When @char in ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+						Then (select b.Char_ from vw_getRANDValue a inner join vw_getchar b on a.[value] = b.NUM)
+					When @char in ('1','2','3','4','5','6','7','8','9')
+						Then (Select Right([value],1) from vw_getRANDValue)
+					else @char 
+					end
 
-					set @new_Value = @new_Value + @replace_Char
+					set @new_Value = @new_Value + IIF(UNICODE(@char) = UNICODE(Upper(@char)),Upper(@replace_Char),@replace_Char)
 					
 			set @i = @i +1
 		end -- End of While Loop
