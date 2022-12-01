@@ -254,3 +254,139 @@ Declare
 GO
 
 
+USE [Staging_OrgSplit_PRD]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Create_Insert_Table_Script]    Script Date: 12/1/2022 12:46:20 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+create proc [dbo].[Create_Insert_Table_Script] @var_tableName varchar(100) , @action varchar(100)
+
+as 
+
+Declare
+--@var_tableName varchar(100),
+--@action varchar(100),
+@Max_Ordinal_Position int;
+
+--set 
+--@var_tableName = 'AccountTeammember';
+--set
+--@action = 'Insert'
+
+IF @action = 'Create'
+
+		IF (EXISTS (SELECT * 
+						 FROM [dbamp_v2_nov].INFORMATION_SCHEMA.TABLES 
+						 WHERE TABLE_SCHEMA = 'dbo' 
+						 AND  TABLE_NAME = @var_tableName))
+		BEGIN
+    
+		set
+		@Max_Ordinal_Position = (select max(Ordinal_Position ) from [dbamp_v2_nov].INFORMATION_SCHEMA.columns where table_name =  @var_tableName);
+
+		Select 
+			0.1,'CREATE TABLE [Staging].[' + @var_tableName +'] (' 
+
+		union
+
+		-- Standard Columns
+			select 
+				0.2, ' id_New Varchar(50) NULL , 
+					   Migrationstatus nvarchar(100) NULL , 
+					   Migrationmessage nvarchar(4000) NULL , 
+					   MigrationDate datetime null ,'
+		union
+
+		-- Lookup Columns
+
+			Select 
+				0.3 , Concat('[Old_', Column_Name , '] ' , Data_Type ,' ','(' + cast(CHARACTER_MAXIMUM_LENGTH as varchar(100)) + ') ' , Case when is_NULLABLE = 'Yes' then 'NULL ' else 'Not Null ' end, 
+					   ' ,')
+			from 
+				[dbamp_v2_nov].INFORMATION_SCHEMA.columns 
+			where 
+				table_name = @var_tableName
+				and
+				Data_Type = 'nchar' 
+				and
+				CHARACTER_MAXIMUM_LENGTH = 18
+		union
+		Select 
+			Ordinal_Position,
+			Concat('[', Column_Name , '] ' , Data_Type ,' ','(' + cast(CHARACTER_MAXIMUM_LENGTH as varchar(100)) + ') ' , Case when is_NULLABLE = 'Yes' then 'NULL ' else 'Not Null ' end, 
+				   Case when Ordinal_Position = @Max_Ordinal_Position then ' )' else ' ,' end)
+		from 
+			[dbamp_v2_nov].INFORMATION_SCHEMA.columns 
+		where 
+			table_name = @var_tableName
+		union
+		Select 
+			99999999, 'alter table [Staging].[' + @var_tableName +'] alter column [Id] nchar (18) Null'
+			END
+
+IF @action = 'Insert'
+
+	IF (EXISTS (SELECT * 
+						 FROM INFORMATION_SCHEMA.TABLES 
+						 WHERE TABLE_SCHEMA = 'staging' 
+						 AND  TABLE_NAME = @var_tableName))
+		BEGIN
+				set
+				@Max_Ordinal_Position = (select max(Ordinal_Position ) from [dbamp_v2_nov].INFORMATION_SCHEMA.columns where table_name =  @var_tableName);
+
+				Select 
+					0.1,'insert into [Staging].[' + @var_tableName +'] ' 
+
+				union
+
+				-- Standard Columns
+					select 
+						0.2, ' Select
+							   NULL AS id_New, 
+							   NULL AS Migrationstatus , 
+							   NULL AS Migrationmessage , 
+							   NULL AS MigrationDate ,'
+				union
+
+				-- Lookup Columns
+
+					Select 
+						0.3 , Concat(Column_Name ,' AS [Old_', Column_Name , '] ' ,' ,')
+					from 
+						[dbamp_v2_nov].INFORMATION_SCHEMA.columns 
+					where 
+						table_name = @var_tableName
+						and
+						Data_Type = 'nchar' 
+						and
+						CHARACTER_MAXIMUM_LENGTH = 18
+				union
+					
+					Select 
+						Ordinal_Position,
+						Case 
+							when 
+								Data_Type = 'nchar' and CHARACTER_MAXIMUM_LENGTH = 18 
+							then 
+								Concat('NULL AS [', Column_Name , '] ' ,Case when Ordinal_Position = @Max_Ordinal_Position then ' ' else ' ,' end)
+							else
+								Concat('[', Column_Name , '] ' ,Case when Ordinal_Position = @Max_Ordinal_Position then ' ' else ' ,' end)
+						end
+					from 
+						[dbamp_v2_nov].INFORMATION_SCHEMA.columns 
+					where 
+						table_name = @var_tableName
+				union
+
+					Select 99999999,'From [dbamp_v2_nov].dbo.' + @var_tableName;
+		END
+GO
+
+
