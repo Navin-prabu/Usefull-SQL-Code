@@ -1,0 +1,256 @@
+USE [Staging_OrgSplit_PRD]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Create_ALL_Script]    Script Date: 12/1/2022 12:46:48 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- drop proc [dbo].[Create_ALL_Script]
+create proc [dbo].[Create_ALL_Script] @var_tableName varchar(100) 
+
+as 
+
+Declare
+
+@Max_Ordinal_Position int,
+@Var_Script nvarchar(4000);
+
+
+
+		IF (NOT EXISTS (SELECT * 
+						 FROM [dbamp_v2].INFORMATION_SCHEMA.TABLES 
+						 WHERE TABLE_SCHEMA = 'dbo' 
+						 AND  TABLE_NAME = @var_tableName))
+		BEGIN
+			
+			Set @Var_Script = ('Select * into [dbamp_v2].dbo.'+@var_tableName +' from Salesforce...'+@var_tableName + ' where 1 = 2');
+			
+			--print @Var_Script
+
+			EXECUTE sp_executesql @Var_Script 
+
+		end
+
+		IF (EXISTS (SELECT * 
+						 FROM [dbamp_v2].INFORMATION_SCHEMA.TABLES 
+						 WHERE TABLE_SCHEMA = 'dbo' 
+						 AND  TABLE_NAME = @var_tableName))
+
+		BEGIN
+
+			Delete dbo.Create_insert_SQL_Scripts where SF_Object_Name = @var_tableName;
+
+			set
+			@Max_Ordinal_Position = (select max(Ordinal_Position ) from dbamp_V2.INFORMATION_SCHEMA.columns where table_name =  @var_tableName);
+
+			insert into dbo.Create_insert_SQL_Scripts
+			Select 
+				'CREATE',@var_tableName,0.1,'CREATE TABLE [Staging].[' + @var_tableName +'] (' 
+
+			union
+
+			-- Standard Columns
+				select 
+					'CREATE',@var_tableName,0.2, ' id_New nVarchar(50) NULL , 
+						   Migrationstatus nvarchar(100) NULL , 
+						   Migrationmessage nvarchar(4000) NULL , 
+						   MigrationDate datetime null ,'
+			union
+
+			-- Lookup Columns
+
+				Select 
+					'CREATE',@var_tableName,0.3 , Concat('[Old_', Column_Name , '] ' , Data_Type ,' ','(' + cast(CHARACTER_MAXIMUM_LENGTH as varchar(100)) + ') ' , Case when is_NULLABLE = 'Yes' then 'NULL ' else 'Not Null ' end, 
+						   ' ,')
+				from 
+					[dbamp_v2].INFORMATION_SCHEMA.columns 
+				where 
+					table_name = @var_tableName
+					and
+					Data_Type in ( 'nchar' ,'nvarchar')
+					and
+					CHARACTER_MAXIMUM_LENGTH = 18
+			union
+			Select 
+				'CREATE',@var_tableName,
+				Ordinal_Position,
+				Concat('[', Column_Name , '] ' , Replace(Data_Type,'datetime2','datetime') ,' ',
+						Case 
+							when Data_type = 'ntext' then ''  
+						else 
+							'(' + cast(CHARACTER_MAXIMUM_LENGTH as varchar(100)) + ') ' end , 
+						Case when is_NULLABLE = 'Yes' then 'NULL ' else 'Not Null ' end, 
+					   Case when Ordinal_Position = @Max_Ordinal_Position then ' )' else ' ,' end)
+			from 
+				[dbamp_v2].INFORMATION_SCHEMA.columns 
+			where 
+				table_name = @var_tableName
+			union
+			Select 
+				'CREATE',@var_tableName,99999999, 'alter table [Staging].[' + @var_tableName +'] alter column [Id] nchar (18) Null';
+		
+			insert into dbo.Create_insert_SQL_Scripts
+					Select 
+						'insert',@var_tableName,0.1,'insert into [Staging].[' + @var_tableName +'] ' 
+
+					union
+
+					-- Standard Columns
+						select 
+							'insert',@var_tableName,0.2, ' Select
+								   NULL AS id_New, 
+								   NULL AS Migrationstatus , 
+								   NULL AS Migrationmessage , 
+								   NULL AS MigrationDate ,'
+					union
+
+					-- Lookup Columns
+
+						Select 
+							'insert',@var_tableName,0.3 , Concat(Column_Name ,' AS [Old_', Column_Name , '] ' ,' ,')
+						from 
+							[dbamp_v2].INFORMATION_SCHEMA.columns 
+						where 
+							table_name = @var_tableName
+							and
+							Data_Type in ( 'nchar' ,'nvarchar')
+							and
+							CHARACTER_MAXIMUM_LENGTH = 18
+					union
+					
+						Select 
+							'insert',@var_tableName,Ordinal_Position,
+							Case 
+								when 
+									Data_Type in ( 'nchar' ,'nvarchar') and CHARACTER_MAXIMUM_LENGTH = 18 
+								then 
+									Concat('NULL AS [', Column_Name , '] ' ,Case when Ordinal_Position = @Max_Ordinal_Position then ' ' else ' ,' end)
+								else
+									Concat('[', Column_Name , '] ' ,Case when Ordinal_Position = @Max_Ordinal_Position then ' ' else ' ,' end)
+							end
+						from 
+							[dbamp_v2].INFORMATION_SCHEMA.columns 
+						where 
+							table_name = @var_tableName
+					union
+
+						Select 'insert',@var_tableName,99999999,'From [dbamp_v2].dbo.' + @var_tableName
+
+					union
+
+					-- update Script for Lookup Columns
+
+						Select 
+							'Update',
+							@var_tableName,0.1 , 
+							Case 
+								when 
+									Column_Name in ('CreatedById','LastModifiedById','UserId') then
+									'Update 
+										staging.' + @var_tableName +CHAR(10) +
+									'Set '+
+     										+Column_Name +'= u.id_New 
+									From
+   										staging.' + @var_tableName +' ATM
+									Inner Join	
+     										staging.[user] u on ATM.Old_'+Column_Name +' = u.[Old_Id]'	
+								when 
+									Column_Name in ('ownerid') then
+									----------- update null owner id									
+									'UPDATE 
+										staging.' + @var_tableName +CHAR(10) +
+											'SET '+
+     												+Column_Name +'= Case when u.id_new is null then  
+																							(
+																								SELECT id_new
+																								FROM staging.[user]
+																								WHERE name = ''Integration Data Migration''
+																							)
+																						else u.id_new end
+										From
+   										staging.' + @var_tableName +' ATM
+									Inner Join	
+     										staging.[user] u on ATM.Old_'+Column_Name +' = u.[Old_Id]'
+								when 
+									Column_Name in ('Recordtypeid') then
+									'Update 
+										staging.' + @var_tableName +CHAR(10) +
+									'Set '+
+     										+Column_Name +'= u.id_New 
+									From
+   										staging.' + @var_tableName +' ATM
+									Inner Join	
+     										staging.[Recordtype] u on ATM.Old_'+Column_Name +' = u.[Old_Id]'
+								else
+									'Update 
+										staging.' + @var_tableName +CHAR(10) +
+									'Set '+
+     										+Column_Name +'= u.id_new
+									From
+   										staging.' + @var_tableName +' ATM
+									Inner Join	
+     										XXXXXXXX u on ATM.Old_'+Column_Name +' = u.old_id'
+							end
+						from 
+							[dbamp_v2].INFORMATION_SCHEMA.columns 
+						where 
+							table_name = @var_tableName
+							and
+							Data_Type in ( 'nchar' ,'nvarchar')
+							and
+							CHARACTER_MAXIMUM_LENGTH = 18
+							and
+							column_name != 'id'
+					
+
+			-----Log Table -----
+
+			INSERT INTO dbo.Create_insert_SQL_Scripts
+				   SELECT 'CREATE'
+						 ,@var_tableName
+						 ,99999999.1
+						 ,'-----Log Table -----'
+				   UNION
+				   SELECT 'CREATE'
+						 ,@var_tableName
+						 ,99999999.2
+						 ,'CREATE TABLE [Staging].[' + @var_tableName + '2] '
+				   UNION
+				   -- Standard Columns
+				   SELECT 'CREATE'
+						 ,@var_tableName
+						 ,99999999.3
+						 ,' (
+											[id] [nvarchar](50) NULL,
+											[SourceSystemid] [nvarchar](1000) NULL,
+											[Migrationmessage] [nvarchar](4000) NULL
+										) ON [PRIMARY] '
+		END
+ 
+
+		else
+
+		Begin
+
+			Delete dbo.Create_insert_SQL_Scripts where SF_Object_Name = @var_tableName;
+			insert into dbo.Create_insert_SQL_Scripts Select '',@var_tableName,0,'Table Missing in [dbamp_v2]';
+		end
+
+GO
+
+
